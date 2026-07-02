@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg
+*.egg-info/
+dist/
+build/
+*.so
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+venv-glm/
+.venv/
+env/
+
+# Model files
+models/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.oxlintrc.json
+
+# Environment (keep .env.example if you create one)
+.env
+.env.local
+.env.production
+.env.development
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+
+# Temp / Downloads in project dir
+*.tmp
+downloads/
+uploads/
+
+# Poppler (user-installed binary, not part of repo)
+poppler/

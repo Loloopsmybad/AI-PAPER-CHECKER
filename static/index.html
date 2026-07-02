@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Exam Evaluator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+        
+        .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+        
+        header { text-align: center; margin-bottom: 2.5rem; }
+        header h1 { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        header p { color: #94a3b8; margin-top: 0.5rem; }
+        
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .card h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: #f1f5f9; }
+        
+        label { display: block; font-size: 0.85rem; font-weight: 500; color: #94a3b8; margin-bottom: 0.4rem; }
+        
+        input[type="text"], textarea, select {
+            width: 100%; padding: 0.65rem 0.85rem; background: #0f172a; border: 1px solid #334155;
+            border-radius: 8px; color: #e2e8f0; font-size: 0.95rem; font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #60a5fa; }
+        textarea { resize: vertical; min-height: 120px; }
+        
+        .input-group { margin-bottom: 1rem; }
+        
+        .upload-zone {
+            border: 2px dashed #334155; border-radius: 10px; padding: 2rem; text-align: center;
+            cursor: pointer; transition: all 0.2s; position: relative;
+        }
+        .upload-zone:hover, .upload-zone.dragover { border-color: #60a5fa; background: rgba(96, 165, 250, 0.05); }
+        .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .upload-zone .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .upload-zone .text { color: #94a3b8; font-size: 0.9rem; }
+        .upload-zone .filename { color: #60a5fa; font-weight: 600; margin-top: 0.5rem; }
+        
+        .row { display: flex; gap: 1rem; }
+        .row > * { flex: 1; }
+        
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+            padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-size: 0.95rem;
+            font-weight: 600; cursor: pointer; transition: all 0.2s; width: 100%;
+        }
+        .btn-primary { background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: #fff; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        
+        .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .result-section { display: none; }
+        .result-section.visible { display: block; }
+        
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .tab {
+            padding: 0.5rem 1rem; background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+            color: #94a3b8; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s;
+        }
+        .tab.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .ocr-output, .evaluation-output {
+            background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 1rem;
+            font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 0.85rem;
+            white-space: pre-wrap; max-height: 400px; overflow-y: auto; line-height: 1.6;
+        }
+        
+        .error { background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #fca5a5; padding: 0.75rem 1rem; border-radius: 8px; margin-top: 1rem; display: none; }
+        .error.visible { display: block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>OCR Exam Evaluator</h1>
+            <p>Upload a PDF answer sheet and rubrics to get AI-powered evaluation</p>
+        </header>
+
+        <div class="card">
+            <h2>PDF Source</h2>
+            <div class="input-group">
+                <label>Google Drive URL or local file path</label>
+                <input type="text" id="pdfUrl" placeholder="https://drive.google.com/file/d/... or C:\path\to\file.pdf">
+            </div>
+            <div class="upload-zone" id="uploadZone">
+                <input type="file" id="pdfFile" accept=".pdf">
+                <div class="icon">📄</div>
+                <div class="text">Or drag & drop a PDF here</div>
+                <div class="filename" id="fileName"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Evaluation Settings</h2>
+            <div class="row">
+                <div class="input-group">
+                    <label>Subject</label>
+                    <input type="text" id="subject" value="General Knowledge">
+                </div>
+                <div class="input-group">
+                    <label>Total Marks</label>
+                    <input type="text" id="totalMarks" value="100">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Rubrics / Evaluation Criteria</label>
+                <textarea id="rubrics" placeholder="Enter grading rubrics here...&#10;&#10;Example:&#10;- Correct answer: 5 marks&#10;- Partial answer: 2-3 marks&#10;- Shows working: 1 mark bonus"></textarea>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" id="evaluateBtn" onclick="evaluate()">
+            Evaluate Answer Sheet
+        </button>
+
+        <div class="error" id="errorMsg"></div>
+
+        <div class="result-section" id="results">
+            <div class="card">
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('evaluation')">Evaluation</div>
+                    <div class="tab" onclick="switchTab('ocr')">OCR Text</div>
+                </div>
+                <div class="tab-content active" id="tab-evaluation">
+                    <div class="evaluation-output" id="evaluationOutput"></div>
+                </div>
+                <div class="tab-content" id="tab-ocr">
+                    <div class="ocr-output" id="ocrOutput"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let uploadedPdfPath = null;
+
+        const uploadZone = document.getElementById('uploadZone');
+        const pdfFileInput = document.getElementById('pdfFile');
+        const fileName = document.getElementById('fileName');
+
+        uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+        uploadZone.addEventListener('drop', e => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                pdfFileInput.files = e.dataTransfer.files;
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+
+        pdfFileInput.addEventListener('change', e => {
+            if (e.target.files.length) handleFileSelect(e.target.files[0]);
+        });
+
+        function handleFileSelect(file) {
+            fileName.textContent = file.name;
+            uploadFile(file);
+        }
+
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('pdf', file);
+            try {
+                const res = await fetch('/api/upload-pdf', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success) uploadedPdfPath = data.pdf_path;
+            } catch (err) {
+                showError('Failed to upload PDF: ' + err.message);
+            }
+        }
+
+        async function evaluate() {
+            const btn = document.getElementById('evaluateBtn');
+            const pdfUrl = document.getElementById('pdfUrl').value.trim();
+            const rubrics = document.getElementById('rubrics').value.trim();
+            const subject = document.getElementById('subject').value.trim();
+            const totalMarks = document.getElementById('totalMarks').value.trim();
+
+            const pdfSource = uploadedPdfPath || pdfUrl;
+            if (!pdfSource) { showError('Please provide a PDF (upload or URL).'); return; }
+            if (!rubrics) { showError('Please enter evaluation rubrics.'); return; }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Processing...';
+            hideError();
+
+            try {
+                const res = await fetch('/api/evaluate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pdf_source: pdfSource, rubrics, subject, total_marks: totalMarks })
+                });
+                const data = await res.json();
+                if (data.error) { showError(data.error); return; }
+
+                document.getElementById('ocrOutput').textContent = data.ocr_text;
+                document.getElementById('evaluationOutput').textContent = data.evaluation;
+                document.getElementById('results').classList.add('visible');
+            } catch (err) {
+                showError('Request failed: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Evaluate Answer Sheet';
+            }
+        }
+
+        function switchTab(name) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + name).classList.add('active');
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.classList.add('visible');
+        }
+        function hideError() { document.getElementById('errorMsg').classList.remove('visible'); }
+    </script>
+</body>
+</html>
